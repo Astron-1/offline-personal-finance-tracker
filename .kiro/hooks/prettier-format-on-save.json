@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Auto-format with Prettier on Save",
+      "trigger": "PostFileSave",
+      "description": "Automatically formats JavaScript, CSS, and HTML files using Prettier when saved",
+      "matcher": "\\\\.(js|css|html)$",
+      "action": {
+        "type": "command",
+        "command": "npx prettier --write \"$file\" 2>&1 || echo \"Prettier not available; skipping format\""
+      }
+    }
+  ]
+}
