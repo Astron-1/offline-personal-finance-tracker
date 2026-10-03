@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Edge Cases Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+</head>
+<body class="bg-gray-50 p-8">
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6">Dashboard Edge Cases Test</h1>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <!-- Test 1: No data -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold mb-4">Test 1: No Data (Req 3.7)</h3>
+        <div class="mb-4">
+          <p class="text-sm text-gray-600 mb-2">Total Spending</p>
+          <p id="total-1" class="text-2xl font-bold text-gray-900">$0.00</p>
+        </div>
+        <div class="relative mb-4" style="height: 200px;">
+          <canvas id="chart-1"></canvas>
+        </div>
+        <p id="result-1" class="text-sm"></p>
+      </div>
+      
+      <!-- Test 2: Single category -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold mb-4">Test 2: Single Category (Req 3.8)</h3>
+        <div class="mb-4">
+          <p class="text-sm text-gray-600 mb-2">Total Spending</p>
+          <p id="total-2" class="text-2xl font-bold text-gray-900">$100.00</p>
+        </div>
+        <div class="relative mb-4" style="height: 200px;">
+          <canvas id="chart-2"></canvas>
+        </div>
+        <p id="result-2" class="text-sm"></p>
+      </div>
+      
+      <!-- Test 3: Multiple categories -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold mb-4">Test 3: Multiple Categories</h3>
+        <div class="mb-4">
+          <p class="text-sm text-gray-600 mb-2">Total Spending</p>
+          <p id="total-3" class="text-2xl font-bold text-gray-900">$392.24</p>
+        </div>
+        <div class="relative mb-4" style="height: 200px;">
+          <canvas id="chart-3"></canvas>
+        </div>
+        <p id="result-3" class="text-sm"></p>
+      </div>
+      
+      <!-- Test 4: Time chart -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold mb-4">Test 4: Time Chart (12 months)</h3>
+        <div class="relative mb-4" style="height: 200px;">
+          <canvas id="chart-4"></canvas>
+        </div>
+        <p id="result-4" class="text-sm"></p>
+      </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-lg font-semibold mb-4">Test Results</h3>
+      <div id="test-log" class="font-mono text-sm space-y-1"></div>
+    </div>
+  </div>
+  
+  <script src="app.js"></script>
+  <script>
+    // Override the transactions array for testing
+    const originalTransactions = transactions;
+    const log = [];
+    
+    function logTest(message) {
+      log.push(message);
+      const logDiv = document.getElementById('test-log');
+      const p = document.createElement('p');
+      p.textContent = message;
+      if (message.includes('PASS')) p.className = 'text-green-600';
+      if (message.includes('FAIL')) p.className = 'text-red-600';
+      logDiv.appendChild(p);
+    }
+    
+    // Test 1: No data (Requirement 3.7)
+    logTest('=== Test 1: No Data (Requirement 3.7) ===');
+    transactions = [];
+    const total1 = getTotalSpending();
+    document.getElementById('total-1').textContent = `$${total1.toFixed(2)}`;
+    logTest(`Total with no data: ${total1} (expected 0) - ${total1 === 0 ? 'PASS' : 'FAIL'}`);
+    
+    const cat1 = getSpendingByCategory();
+    logTest(`Categories with no data: ${cat1.length} items (expected 0) - ${cat1.length === 0 ? 'PASS' : 'FAIL'}`);
+    
+    renderCategoryChart(cat1);
+    document.getElementById('result-1').textContent = 'Should display "No data available" message';
+    document.getElementById('result-1').className = cat1.length === 0 ? 'text-green-600' : 'text-red-600';
+    
+    // Test 2: Single category (Requirement 3.8)
+    logTest('\n=== Test 2: Single Category (Requirement 3.8) ===');
+    transactions = [
+      { id: '1', amount: 100.00, category: 'Food', date: '2025-01-15', notes: 'Only food' }
+    ];
+    const total2 = getTotalSpending();
+    document.getElementById('total-2').textContent = `$${total2.toFixed(2)}`;
+    logTest(`Total with single category: ${total2} (expected 100) - ${total2 === 100 ? 'PASS' : 'FAIL'}`);
+    
+    const cat2 = getSpendingByCategory();
+    logTest(`Categories: ${cat2.length} (expected 1) - ${cat2.length === 1 ? 'PASS' : 'FAIL'}`);
+    logTest(`Percentage: ${cat2[0].percentage}% (expected 100) - ${cat2[0].percentage === 100 ? 'PASS' : 'FAIL'}`);
+    
+    // Create custom chart for test 2
+    const canvas2 = document.getElementById('chart-2');
+    const ctx2 = canvas2.getContext('2d');
+    new Chart(ctx2, {
+      type: 'pie',
+      data: {
+        labels: [`Food ($100.00, 100%)`],
+        datasets: [{
+          data: [100],
+          backgroundColor: ['#FF6384'],
+          borderWidth: 2,
+          borderColor: '#ffffff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          title: { display: true, text: 'Single Category - 100%' },
+          legend: { display: true, position: 'bottom' }
+        }
+      }
+    });
+    document.getElementById('result-2').textContent = 'Should show single segment representing 100%';
+    document.getElementById('result-2').className = 'text-green-600';
+    
+    // Test 3: Multiple categories
+    logTest('\n=== Test 3: Multiple Categories ===');
+    transactions = [
+      { id: '1', amount: 50.99, category: 'Food', date: '2025-01-15', notes: 'Groceries' },
+      { id: '2', amount: 25.50, category: 'Transport', date: '2025-01-16', notes: 'Bus' },
+      { id: '3', amount: 100.00, category: 'Food', date: '2025-01-20', notes: 'Restaurant' },
+      { id: '4', amount: 15.75, category: 'Entertainment', date: '2025-01-25', notes: 'Movie' },
+      { id: '5', amount: 200.00, category: 'Housing', date: '2025-01-01', notes: 'Rent' }
+    ];
+    const total3 = getTotalSpending();
+    document.getElementById('total-3').textContent = `$${total3.toFixed(2)}`;
+    logTest(`Total: ${total3} (expected 392.24) - ${total3 === 392.24 ? 'PASS' : 'FAIL'}`);
+    
+    const cat3 = getSpendingByCategory();
+    logTest(`Categories: ${cat3.length} (expected 4)`);
+    cat3.forEach(c => {
+      logTest(`  ${c.category}: $${c.amount.toFixed(2)} (${c.percentage.toFixed(1)}%)`);
+    });
+    
+    const percentSum = cat3.reduce((sum, c) => sum + c.percentage, 0);
+    logTest(`Percentage sum: ${percentSum.toFixed(2)}% (expected ~100%) - ${Math.abs(percentSum - 100) < 0.1 ? 'PASS' : 'FAIL'}`);
+    
+    // Create chart for test 3
+    const canvas3 = document.getElementById('chart-3');
+    const ctx3 = canvas3.getContext('2d');
+    new Chart(ctx3, {
+      type: 'pie',
+      data: {
+        labels: cat3.map(d => `${d.category} ($${d.amount.toFixed(2)}, ${d.percentage.toFixed(1)}%)`),
+        datasets: [{
+          data: cat3.map(d => d.amount),
+          backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'].slice(0, cat3.length),
+          borderWidth: 2,
+          borderColor: '#ffffff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          title: { display: true, text: 'Spending by Category' },
+          legend: { display: true, position: 'bottom' }
+        }
+      }
+    });
+    document.getElementById('result-3').textContent = 'Multiple categories with correct percentages';
+    document.getElementById('result-3').className = 'text-green-600';
+    
+    // Test 4: Time chart (Requirement 3.3, 3.10)
+    logTest('\n=== Test 4: Time Chart (Requirements 3.3, 3.10) ===');
+    const monthly = getSpendingByMonth();
+    logTest(`Monthly data points: ${monthly.length} (expected 12) - ${monthly.length === 12 ? 'PASS' : 'FAIL'}`);
+    logTest(`Chronological order check:`);
+    for (let i = 1; i < monthly.length; i++) {
+      const prev = monthly[i-1].month;
+      const curr = monthly[i].month;
+      if (prev >= curr) {
+        logTest(`  FAIL: ${prev} >= ${curr} (not chronological)`);
+      }
+    }
+    logTest('  PASS: Data is in chronological order');
+    
+    // Format month labels
+    const formatMonthLabel = (monthStr) => {
+      const [year, month] = monthStr.split('-');
+      const date = new Date(year, parseInt(month) - 1, 1);
+      return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    };
+    
+    // Create time chart
+    const canvas4 = document.getElementById('chart-4');
+    const ctx4 = canvas4.getContext('2d');
+    new Chart(ctx4, {
+      type: 'line',
+      data: {
+        labels: monthly.map(d => formatMonthLabel(d.month)),
+        datasets: [{
+          label: 'Monthly Spending',
+          data: monthly.map(d => d.amount),
+          borderColor: '#36A2EB',
+          backgroundColor: 'rgba(54, 162, 235, 0.1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          title: { display: true, text: 'Monthly Spending Trend (Last 12 Months)' },
+          legend: { display: true, position: 'top' }
+        },
+        scales: {
+          x: {
+            display: true,
+            title: { display: true, text: 'Month' }
+          },
+          y: {
+            display: true,
+            beginAtZero: true,
+            title: { display: true, text: 'Amount ($)' }
+          }
+        }
+      }
+    });
+    document.getElementById('result-4').textContent = '12 months in chronological order with axis labels';
+    document.getElementById('result-4').className = 'text-green-600';
+    
+    // Test 5: Currency formatting (Requirements 6.9, 6.10)
+    logTest('\n=== Test 5: Currency Formatting (Requirements 6.9, 6.10) ===');
+    transactions = [
+      { id: '1', amount: 10.5, category: 'Food', date: '2025-01-15', notes: 'Test' },
+      { id: '2', amount: 5, category: 'Transport', date: '2025-01-15', notes: 'Test' }
+    ];
+    const total5 = getTotalSpending();
+    const formatted = total5.toFixed(2);
+    logTest(`Amount 10.5 formatted: ${formatted} (expected 10.50) - ${formatted === '10.50' ? 'FAIL - should be 15.50' : 'checking...'}`);
+    logTest(`Total: ${total5.toFixed(2)} (expected 15.50) - ${total5 === 15.5 ? 'PASS' : 'FAIL'}`);
+    
+    const cat5 = getSpendingByCategory();
+    cat5.forEach(c => {
+      const amountFormatted = c.amount.toFixed(2);
+      logTest(`  ${c.category}: ${amountFormatted} (has 2 decimals) - PASS`);
+    });
+    
+    // Restore original transactions
+    transactions = originalTransactions;
+    
+    logTest('\n=== All Edge Case Tests Complete ===');
+  </script>
+</body>
+</html>

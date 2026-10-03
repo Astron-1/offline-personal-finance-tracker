@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Storage & CRUD Tests - Personal Finance Tracker</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 { color: #333; }
+    h2 { color: #555; margin-top: 30px; }
+    .test-group { 
+      background: white; 
+      padding: 20px; 
+      margin: 10px 0; 
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .test-result {
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .pass {
+      background: #d4edda;
+      color: #155724;
+      border-left: 4px solid #28a745;
+    }
+    .fail {
+      background: #f8d7da;
+      color: #721c24;
+      border-left: 4px solid #dc3545;
+    }
+    .summary {
+      background: #e7f3ff;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+    pre {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Storage & CRUD Tests</h1>
+  <p>Testing transaction CRUD operations and localStorage functionality</p>
+  
+  <div id="test-results"></div>
+  
+  <script src="app.js"></script>
+  <script>
+    // Test runner
+    const results = [];
+    
+    function assert(condition, message) {
+      if (condition) {
+        results.push({ pass: true, message });
+        return true;
+      } else {
+        results.push({ pass: false, message });
+        return false;
+      }
+    }
+    
+    function assertEqual(actual, expected, message) {
+      const pass = actual === expected;
+      if (pass) {
+        results.push({ pass: true, message });
+      } else {
+        results.push({ 
+          pass: false, 
+          message: `${message}\n  Expected: ${JSON.stringify(expected)}\n  Actual: ${JSON.stringify(actual)}` 
+        });
+      }
+      return pass;
+    }
+    
+    function assertArrayEqual(actual, expected, message) {
+      const pass = JSON.stringify(actual) === JSON.stringify(expected);
+      if (pass) {
+        results.push({ pass: true, message });
+      } else {
+        results.push({ 
+          pass: false, 
+          message: `${message}\n  Expected: ${JSON.stringify(expected)}\n  Actual: ${JSON.stringify(actual)}` 
+        });
+      }
+      return pass;
+    }
+    
+    function testGroup(name, fn) {
+      console.log(`\n=== ${name} ===`);
+      fn();
+    }
+    
+    // Clear localStorage before tests
+    localStorage.clear();
+    transactions = [];
+    
+    // ===== VALIDATION TESTS =====
+    testGroup('Validation: Amount Rules (Req 1.7)', () => {
+      // Valid amounts
+      let errors = validateTransaction({ amount: 10.99, category: 'Food', date: '2024-01-15', notes: '' });
+      assert(errors.length === 0, '✓ Valid amount with 2 decimals passes');
+      
+      errors = validateTransaction({ amount: 100, category: 'Food', date: '2024-01-15', notes: '' });
+      assert(errors.length === 0, '✓ Valid amount without decimals passes');
+      
+      errors = validateTransaction({ amount: 0.01, category: 'Food', date: '2024-01-15', notes: '' });
+      assert(errors.length === 0, '✓ Minimum positive amount (0.01) passes');
+      
+      // Invalid amounts
+      errors = validateTransaction({ amount: -10.50, category: 'Food', date: '2024-01-15', notes: '' });
+      assert(errors.some(e => e.field === 'amount' && e.code === 'OUT_OF_RANGE'), '✓ Negative amount rejected');
+      
+      errors = validateTransaction({ amount: 0, category: 'Food', date: '2024-01-15', notes: '' });
+      assert(errors.some(e => e.field === 'amount' && e.code === 'OUT_OF_RANGE'), '✓ Zero amount rejected');
+      
+      errors = validateTransaction({ amount: 10.999, category: 'Food', date: '2024-01-15', notes: '' });
+      assert(errors.some(e => e.field === 'amount' && e.code === 'INVALID_FORMAT'), '✓ Amount with 3 decimals rejected');
+      
+      errors = validateTransaction({ amount: 'abc', category: 'Food', date: '2024-01-15', notes: '' });
+      assert(errors.some(e => e.field === 'amount' && e.code === 'INVALID_FORMAT'), '✓ Non-numeric amount rejected');
+      
+      errors = validateTransaction({ amount: '', category: 'Food', date: '2024-01-15', notes: '' });
+      assert(errors.some(e => e.field === 'amount'), '✓ Empty amount rejected');
+    });
+    
+    testGroup('Validation: Category Rules (Req 1.4)', () => {
+      const validCategories = ['Food', 'Transport', 'Housing', 'Shopping', 'Entertainment', 'Health', 'Other'];
+      
+      validCategories.forEach(cat => {
+        const errors = validateTransaction({ amount: 10, category: cat, date: '2024-01-15', notes: '' });
+        assert(errors.length === 0, `✓ Valid category "${cat}" passes`);
+      });
+      
+      let errors = validateTransaction({ amount: 10, category: 'InvalidCategory', date: '2024-01-15', notes: '' });
+      assert(errors.some(e => e.field === 'category' && e.code === 'INVALID_CATEGORY'), '✓ Invalid category rejected');
+      
+      errors = validateTransaction({ amount: 10, category: '', date: '2024-01-15', notes: '' });
+      assert(errors.some(e => e.field === 'category'), '✓ Empty category rejected');
+    });
+    
+    testGroup('Validation: Date Rules (Req 1.8)', () => {
+      // Valid dates
+      let errors = validateTransaction({ amount: 10, category: 'Food', date: '2024-01-15', notes: '' });
+      assert(errors.length === 0, '✓ Valid date (YYYY-MM-DD) passes');
+      
+      errors = validateTransaction({ amount: 10, category: 'Food', date: '2024-12-31', notes: '' });
+      assert(errors.length === 0, '✓ Valid end of year date passes');
+      
+      // Invalid dates
+      errors = validateTransaction({ amount: 10, category: 'Food', date: '2024-02-30', notes: '' });
+      assert(errors.some(e => e.field === 'date' && e.code === 'INVALID_DATE'), '✓ Impossible date (Feb 30) rejected');
+      
+      errors = validateTransaction({ amount: 10, category: 'Food', date: 'not-a-date', notes: '' });
+      assert(errors.some(e => e.field === 'date' && e.code === 'INVALID_DATE'), '✓ Non-date string rejected');
+      
+      errors = validateTransaction({ amount: 10, category: 'Food', date: '', notes: '' });
+      assert(errors.some(e => e.field === 'date'), '✓ Empty date rejected');
+    });
+    
+    testGroup('Validation: Notes Rules', () => {
+      let errors = validateTransaction({ amount: 10, category: 'Food', date: '2024-01-15', notes: 'Valid note' });
+      assert(errors.length === 0, '✓ Short notes pass');
+      
+      errors = validateTransaction({ amount: 10, category: 'Food', date: '2024-01-15', notes: 'a'.repeat(500) });
+      assert(errors.length === 0, '✓ Notes with exactly 500 characters pass');
+      
+      errors = validateTransaction({ amount: 10, category: 'Food', date: '2024-01-15', notes: 'a'.repeat(501) });
+      assert(errors.some(e => e.field === 'notes' && e.code === 'MAX_LENGTH_EXCEEDED'), '✓ Notes exceeding 500 characters rejected');
+      
+      errors = validateTransaction({ amount: 10, category: 'Food', date: '2024-01-15', notes: '' });
+      assert(errors.length === 0, '✓ Empty notes pass');
+    });
+    
+    // ===== STORAGE TESTS =====
+    testGroup('Storage: Basic Operations (Req 4.4, 4.7)', () => {
+      localStorage.clear();
+      
+      // Test loading from empty storage
+      const loaded = loadTransactions();
+      assert(Array.isArray(loaded) && loaded.length === 0, '✓ Loading from empty storage returns empty array');
+      
+      // Test saving and loading
+      const testData = [
+        { id: '1', amount: 10.50, category: 'Food', date: '2024-01-15', notes: 'Test', createdAt: Date.now() }
+      ];
+      const saveResult = saveTransactions(testData);
+      assert(saveResult.success === true, '✓ Saving valid data succeeds');
+      
+      const reloaded = loadTransactions();
+      assertEqual(reloaded.length, 1, '✓ Reloading returns saved data');
+      assertEqual(reloaded[0].amount, 10.50, '✓ Saved amount preserved');
+    });
+    
+    testGroup('Storage: Error Handling (Req 4.7)', () => {
+      // Test loading corrupted data
+      localStorage.setItem('finance_tracker_transactions', 'not valid json');
+      const loaded = loadTransactions();
+      assert(Array.isArray(loaded) && loaded.length === 0, '✓ Corrupted JSON returns empty array without crashing');
+      
+      // Test loading non-array data
+      localStorage.setItem('finance_tracker_transactions', '{"not": "an array"}');
+      const loaded2 = loadTransactions();
+      assert(Array.isArray(loaded2) && loaded2.length === 0, '✓ Non-array data returns empty array');
+      
+      localStorage.clear();
+    });
+    
+    testGroup('Storage: Availability Check (Req 4.5)', () => {
+      const available = isStorageAvailable();
+      assert(available === true, '✓ localStorage is available in this environment');
+    });
+    
+    // ===== CRUD TESTS =====
+    testGroup('CRUD: Add Transaction (Req 1.1)', () => {
+      transactions = [];
+      
+      const tx = { amount: 50.00, category: 'Shopping', date: '2024-01-20', notes: 'Test purchase' };
+      const result = addTransaction(tx);
+      
+      assert(result.success === true, '✓ Adding valid transaction succeeds');
+      assert(result.transaction && result.transaction.id, '✓ Added transaction has generated ID');
+      assertEqual(transactions.length, 1, '✓ Transaction added to array');
+      assertEqual(transactions[0].amount, 50.00, '✓ Amount stored correctly');
+      assertEqual(transactions[0].category, 'Shopping', '✓ Category stored correctly');
+      
+      // Test that invalid transaction is rejected
+      const invalidTx = { amount: -10, category: 'Food', date: '2024-01-20', notes: '' };
+      const result2 = addTransaction(invalidTx);
+      assert(result2.success === false, '✓ Invalid transaction rejected');
+      assertEqual(transactions.length, 1, '✓ Invalid transaction not added to array');
+    });
+    
+    testGroup('CRUD: Update Transaction (Req 1.2)', () => {
+      transactions = [];
+      const tx = { amount: 30.00, category: 'Food', date: '2024-01-15', notes: 'Original' };
+      const addResult = addTransaction(tx);
+      const id = addResult.transaction.id;
+      
+      const updates = { amount: 35.00, category: 'Transport', date: '2024-01-16', notes: 'Updated' };
+      const result = updateTransaction(id, updates);
+      
+      assert(result.success === true, '✓ Updating transaction succeeds');
+      assertEqual(transactions[0].amount, 35.00, '✓ Amount updated correctly');
+      assertEqual(transactions[0].category, 'Transport', '✓ Category updated correctly');
+      assertEqual(transactions[0].notes, 'Updated', '✓ Notes updated correctly');
+      
+      // Test updating with invalid data
+      const invalidUpdates = { amount: -5, category: 'Food', date: '2024-01-16', notes: '' };
+      const result2 = updateTransaction(id, invalidUpdates);
+      assert(result2.success === false, '✓ Invalid update rejected');
+      assertEqual(transactions[0].amount, 35.00, '✓ Original data preserved after failed update');
+      
+      // Test updating non-existent transaction
+      const result3 = updateTransaction('nonexistent-id', updates);
+      assert(result3.success === false, '✓ Updating non-existent transaction fails gracefully');
+    });
+    
+    testGroup('CRUD: Delete Transaction (Req 1.3)', () => {
+      transactions = [];
+      const tx1 = { amount: 10.00, category: 'Food', date: '2024-01-15', notes: 'One' };
+      const tx2 = { amount: 20.00, category: 'Transport', date: '2024-01-16', notes: 'Two' };
+      addTransaction(tx1);
+      addTransaction(tx2);
+      const id = transactions[0].id;
+      
+      assertEqual(transactions.length, 2, '✓ Setup: Two transactions added');
+      
+      const result = deleteTransaction(id);
+      assert(result.success === true, '✓ Deleting transaction succeeds');
+      assertEqual(transactions.length, 1, '✓ Transaction removed from array');
+      assert(!transactions.find(t => t.id === id), '✓ Deleted transaction not in array');
+      
+      // Test deleting non-existent transaction
+      const result2 = deleteTransaction('nonexistent-id');
+      assert(result2.success === false, '✓ Deleting non-existent transaction fails gracefully');
+    });
+    
+    testGroup('CRUD: Get All Transactions (Req 2.1)', () => {
+      transactions = [];
+      
+      // Add transactions in random order
+      addTransaction({ amount: 10, category: 'Food', date: '2024-01-20', notes: 'Latest' });
+      addTransaction({ amount: 20, category: 'Transport', date: '2024-01-10', notes: 'Oldest' });
+      addTransaction({ amount: 15, category: 'Shopping', date: '2024-01-15', notes: 'Middle' });
+      
+      const sorted = getAllTransactions();
+      
+      assertEqual(sorted.length, 3, '✓ All transactions returned');
+      assertEqual(sorted[0].date, '2024-01-20', '✓ Most recent transaction first');
+      assertEqual(sorted[1].date, '2024-01-15', '✓ Middle transaction second');
+      assertEqual(sorted[2].date, '2024-01-10', '✓ Oldest transaction last');
+      assert(transactions.length === 3, '✓ Original array not modified');
+    });
+    
+    testGroup('Integration: Full CRUD Cycle', () => {
+      localStorage.clear();
+      transactions = [];
+      
+      // Add
+      const tx1 = { amount: 100.00, category: 'Housing', date: '2024-01-01', notes: 'Rent' };
+      const addResult = addTransaction(tx1);
+      assert(addResult.success === true, '✓ Step 1: Add transaction');
+      
+      // Reload from storage
+      transactions = loadTransactions();
+      assertEqual(transactions.length, 1, '✓ Step 2: Transaction persisted to storage');
+      
+      // Update
+      const id = transactions[0].id;
+      const updates = { amount: 110.00, category: 'Housing', date: '2024-01-01', notes: 'Rent + utilities' };
+      const updateResult = updateTransaction(id, updates);
+      assert(updateResult.success === true, '✓ Step 3: Update transaction');
+      
+      // Reload again
+      transactions = loadTransactions();
+      assertEqual(transactions[0].amount, 110.00, '✓ Step 4: Updated data persisted');
+      
+      // Delete
+      const deleteResult = deleteTransaction(id);
+      assert(deleteResult.success === true, '✓ Step 5: Delete transaction');
+      
+      // Final reload
+      transactions = loadTransactions();
+      assertEqual(transactions.length, 0, '✓ Step 6: Deletion persisted to storage');
+    });
+    
+    // ===== DISPLAY RESULTS =====
+    function displayResults() {
+      const container = document.getElementById('test-results');
+      let html = '';
+      
+      const passed = results.filter(r => r.pass).length;
+      const failed = results.filter(r => !r.pass).length;
+      const total = results.length;
+      
+      html += `<div class="summary">
+        <h2>Test Summary</h2>
+        <p>Total: ${total} | Passed: ${passed} | Failed: ${failed}</p>
+        <p>Success Rate: ${((passed/total)*100).toFixed(1)}%</p>
+      </div>`;
+      
+      results.forEach(result => {
+        const className = result.pass ? 'pass' : 'fail';
+        const icon = result.pass ? '✓' : '✗';
+        html += `<div class="test-result ${className}">${icon} ${result.message}</div>`;
+      });
+      
+      container.innerHTML = html;
+      
+      console.log(`\n${'='.repeat(50)}`);
+      console.log(`TEST SUMMARY: ${passed}/${total} passed (${failed} failed)`);
+      console.log('='.repeat(50));
+    }
+    
+    displayResults();
+  </script>
+</body>
+</html>

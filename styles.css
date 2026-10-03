@@ -1,0 +1,155 @@
+/* Custom styles for Personal Finance Tracker */
+
+/* Ensure consistent focus states across all interactive elements */
+*:focus {
+  outline: none;
+}
+
+/* Smooth transitions for hover states (100ms requirement) */
+button,
+a,
+input,
+select {
+  transition: all 100ms ease-in-out;
+}
+
+/* Table styling for transaction list */
+#transaction-list table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+#transaction-list th {
+  font-weight: 600;
+  color: #374151; /* gray-700 */
+  text-transform: uppercase;
+  font-size: 0.75rem; /* text-xs */
+  letter-spacing: 0.05em;
+}
+
+#transaction-list td {
+  color: #1f2937; /* gray-800 */
+}
+
+/* Right-align amount columns (Requirement 2.2, 6.9) */
+#transaction-list .amount-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Currency formatting - consistent throughout app (Requirement 6.9, 6.10) */
+.currency {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ensure minimum viewport width of 320px maintains layout (Requirement 2.7) */
+@media (max-width: 320px) {
+  body {
+    min-width: 320px;
+  }
+}
+
+/* Responsive table for small screens */
+@media (max-width: 640px) {
+  #transaction-list table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
+
+/* Chart container responsiveness */
+canvas {
+  max-width: 100%;
+  height: auto !important;
+}
+
+/* Empty state styling */
+.empty-state {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: #6b7280; /* gray-500 */
+}
+
+/* Error message styling (3+ seconds for errors - Requirement 1.6) */
+.message-error {
+  animation: fadeInOut 3000ms ease-in-out;
+}
+
+/* Success message styling (2+ seconds - Requirement 1.5) */
+.message-success {
+  animation: fadeInOut 2000ms ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  90% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+/* Disabled state styling (Requirement 6.8) */
+button:disabled,
+input:disabled,
+select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Focus indicators (Requirement 6.7) */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+a:focus-visible {
+  outline: 2px solid #3b82f6; /* blue-500 - accent color */
+  outline-offset: 2px;
+}
+
+/* Hover states (Requirement 6.6 - 100ms transition) */
+button:hover:not(:disabled),
+a:hover {
+  transform: translateY(-1px);
+}
+
+/* Action button styling consistency */
+.btn-action {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 0.25rem;
+  transition: all 100ms ease-in-out;
+  cursor: pointer;
+}
+
+.btn-action:hover {
+  text-decoration: underline;
+}
+
+/* Spacing scale consistency (Requirement 6.2) - using Tailwind defaults */
+/* Already handled by Tailwind utility classes */
+
+/* Three font sizes (Requirement 6.3) */
+/* Body text: base (16px) - default */
+/* Headings: lg (18px) or xl (20px) */
+/* Labels: sm (14px) */
+
+/* Single accent color throughout (Requirement 6.1) */
+/* Blue-600 (#3b82f6) used for:
+   - Primary action buttons
+   - Links
+   - Focus indicators
+   - Active navigation items
+*/

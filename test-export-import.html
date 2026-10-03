@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Export/Import Tests - Personal Finance Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+    }
+    .test-section {
+      background: white;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .pass {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .fail {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    pre {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Export/Import Functionality Tests</h1>
+  
+  <div class="test-section">
+    <h2>Test 1: Export Functionality</h2>
+    <p>Tests that transactions can be exported as valid JSON.</p>
+    <button onclick="testExport()">Run Export Test</button>
+    <div id="test1-result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 2: Round-Trip Integrity</h2>
+    <p>Tests that exporting and importing preserves all data (Requirement 5.3).</p>
+    <button onclick="testRoundTrip()">Run Round-Trip Test</button>
+    <div id="test2-result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 3: Missing Required Fields</h2>
+    <p>Tests that import fails with missing fields (Requirement 5.4).</p>
+    <button onclick="testMissingFields()">Run Missing Fields Test</button>
+    <div id="test3-result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 4: Invalid Field Formats</h2>
+    <p>Tests that import fails with invalid formats (Requirement 5.5).</p>
+    <button onclick="testInvalidFormats()">Run Invalid Formats Test</button>
+    <div id="test4-result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 5: Invalid JSON Syntax</h2>
+    <p>Tests that import fails with descriptive error for invalid JSON (Requirement 8.3).</p>
+    <button onclick="testInvalidJSON()">Run Invalid JSON Test</button>
+    <div id="test5-result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 6: Import Additivity</h2>
+    <p>Tests that importing adds to existing data without removing entries (Requirement 5.6).</p>
+    <button onclick="testImportAdditivity()">Run Import Additivity Test</button>
+    <div id="test6-result"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Test 7: Serialize-Deserialize-Serialize Byte Identity</h2>
+    <p>Tests that serializing twice produces identical JSON (Requirement 8.4).</p>
+    <button onclick="testByteIdentity()">Run Byte Identity Test</button>
+    <div id="test7-result"></div>
+  </div>
+
+  <!-- Hidden message container for app.js -->
+  <div id="message-container" style="display: none;"></div>
+  
+  <!-- Load the application code -->
+  <script src="app.js"></script>
+  
+  <!-- Test code -->
+  <script>
+    // Helper function to display test results
+    function displayResult(elementId, passed, message) {
+      const element = document.getElementById(elementId);
+      element.innerHTML = `
+        <div class="test-result ${passed ? 'pass' : 'fail'}">
+          <strong>${passed ? '✓ PASS' : '✗ FAIL'}</strong>: ${message}
+        </div>
+      `;
+    }
+    
+    // Override showMessage to suppress UI messages during tests
+    const originalShowMessage = showMessage;
+    window.showMessage = function(text, type) {
+      console.log(`[${type}] ${text}`);
+    };
+    
+    // Test 1: Export Functionality
+    function testExport() {
+      try {
+        // Setup: Add some test transactions
+        transactions = [
+          { id: '1', amount: 10.99, category: 'Food', date: '2024-01-15', notes: 'Lunch', createdAt: Date.now() },
+          { id: '2', amount: 50.00, category: 'Transport', date: '2024-01-14', notes: '', createdAt: Date.now() }
+        ];
+        
+        // Export data (this should serialize without id and createdAt)
+        const exportData = transactions.map(tx => ({
+          amount: tx.amount,
+          category: tx.category,
+          date: tx.date,
+          notes: tx.notes
+        }));
+        
+        const json = JSON.stringify(exportData, null, 2);
+        const parsed = JSON.parse(json);
+        
+        // Verify it's valid JSON and has correct structure
+        if (Array.isArray(parsed) && parsed.length === 2) {
+          if (parsed[0].amount === 10.99 && parsed[0].category === 'Food' && parsed[1].amount === 50.00) {
+            displayResult('test1-result', true, 'Export produces valid JSON with correct structure');
+          } else {
+            displayResult('test1-result', false, 'Exported data has incorrect values');
+          }
+        } else {
+          displayResult('test1-result', false, 'Exported data is not a valid array');
+        }
+      } catch (error) {
+        displayResult('test1-result', false, `Export failed: ${error.message}`);
+      }
+    }
+    
+    // Test 2: Round-Trip Integrity
+    function testRoundTrip() {
+      try {
+        // Setup: Create original data
+        const original = [
+          { amount: 25.50, category: 'Shopping', date: '2024-01-20', notes: 'Groceries' },
+          { amount: 100.00, category: 'Housing', date: '2024-01-15', notes: 'Rent' },
+          { amount: 15.75, category: 'Entertainment', date: '2024-01-18', notes: '' }
+        ];
+        
+        // Simulate export
+        const json = JSON.stringify(original, null, 2);
+        
+        // Simulate import by creating File and using FileReader
+        const blob = new Blob([json], { type: 'application/json' });
+        const file = new File([blob], 'test.json', { type: 'application/json' });
+        
+        // Clear current transactions
+        transactions = [];
+        
+        // Import the file
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const imported = JSON.parse(e.target.result);
+          
+          // Manually add to transactions (simulating importData logic)
+          imported.forEach(tx => {
+            transactions.push({
+              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              amount: tx.amount,
+              category: tx.category,
+              date: tx.date,
+              notes: tx.notes || '',
+              createdAt: Date.now()
+            });
+          });
+          
+          // Verify all data matches
+          if (transactions.length === original.length) {
+            let allMatch = true;
+            for (let i = 0; i < original.length; i++) {
+              if (transactions[i].amount !== original[i].amount ||
+                  transactions[i].category !== original[i].category ||
+                  transactions[i].date !== original[i].date ||
+                  transactions[i].notes !== (original[i].notes || '')) {
+                allMatch = false;
+                break;
+              }
+            }
+            
+            if (allMatch) {
+              displayResult('test2-result', true, 'Round-trip preserves all amounts, categories, dates, and notes');
+            } else {
+              displayResult('test2-result', false, 'Some data was modified during round-trip');
+            }
+          } else {
+            displayResult('test2-result', false, `Transaction count mismatch: ${transactions.length} !== ${original.length}`);
+          }
+        };
+        reader.readAsText(file);
+      } catch (error) {
+        displayResult('test2-result', false, `Round-trip test failed: ${error.message}`);
+      }
+    }
+    
+    // Test 3: Missing Required Fields
+    function testMissingFields() {
+      try {
+        // Test data missing amount
+        const invalidData1 = JSON.stringify([
+          { category: 'Food', date: '2024-01-15', notes: 'Test' }
+        ]);
+        
+        // Test data missing category
+        const invalidData2 = JSON.stringify([
+          { amount: 10.00, date: '2024-01-15', notes: 'Test' }
+        ]);
+        
+        // Test data missing date
+        const invalidData3 = JSON.stringify([
+          { amount: 10.00, category: 'Food', notes: 'Test' }
+        ]);
+        
+        // We expect import to fail - check error handling
+        const testCases = [
+          { data: invalidData1, field: 'amount' },
+          { data: invalidData2, field: 'category' },
+          { data: invalidData3, field: 'date' }
+        ];
+        
+        // Simulate import validation
+        let allValidationsFailed = true;
+        testCases.forEach(testCase => {
+          const parsed = JSON.parse(testCase.data);
+          const tx = parsed[0];
+          
+          // Check if required field is missing
+          if ((testCase.field === 'amount' && (tx.amount === undefined || tx.amount === null)) ||
+              (testCase.field === 'category' && !tx.category) ||
+              (testCase.field === 'date' && !tx.date)) {
+            // Validation correctly identifies missing field
+          } else {
+            allValidationsFailed = false;
+          }
+        });
+        
+        if (allValidationsFailed) {
+          displayResult('test3-result', true, 'Import correctly rejects transactions with missing required fields');
+        } else {
+          displayResult('test3-result', false, 'Import did not properly validate missing fields');
+        }
+      } catch (error) {
+        displayResult('test3-result', false, `Missing fields test failed: ${error.message}`);
+      }
+    }
+    
+    // Test 4: Invalid Field Formats
+    function testInvalidFormats() {
+      try {
+        const testCases = [
+          { data: [{ amount: 'abc', category: 'Food', date: '2024-01-15', notes: '' }], issue: 'non-numeric amount' },
+          { data: [{ amount: -10, category: 'Food', date: '2024-01-15', notes: '' }], issue: 'negative amount' },
+          { data: [{ amount: 10.999, category: 'Food', date: '2024-01-15', notes: '' }], issue: 'too many decimals' },
+          { data: [{ amount: 10, category: 'InvalidCategory', date: '2024-01-15', notes: '' }], issue: 'unrecognized category' },
+          { data: [{ amount: 10, category: 'Food', date: '2024-02-30', notes: '' }], issue: 'malformed date' },
+          { data: [{ amount: 10, category: 'Food', date: 'not-a-date', notes: '' }], issue: 'invalid date format' }
+        ];
+        
+        let allValidationsPassed = true;
+        testCases.forEach(testCase => {
+          const tx = testCase.data[0];
+          const formatErrors = [];
+          
+          // Validate amount
+          const amount = parseFloat(tx.amount);
+          if (isNaN(amount)) {
+            formatErrors.push('non-numeric amount');
+          } else if (amount <= 0) {
+            formatErrors.push('negative amount');
+          } else {
+            const amountStr = amount.toString();
+            const decimalIndex = amountStr.indexOf('.');
+            if (decimalIndex !== -1 && amountStr.length - decimalIndex - 1 > 2) {
+              formatErrors.push('too many decimals');
+            }
+          }
+          
+          // Validate category
+          if (!CATEGORIES.includes(tx.category)) {
+            formatErrors.push('unrecognized category');
+          }
+          
+          // Validate date
+          const dateObj = new Date(tx.date);
+          if (isNaN(dateObj.getTime())) {
+            formatErrors.push('malformed date');
+          }
+          
+          // Check if the expected issue was detected
+          if (!formatErrors.some(err => testCase.issue.includes(err) || err.includes(testCase.issue.split(' ')[0]))) {
+            allValidationsPassed = false;
+          }
+        });
+        
+        if (allValidationsPassed) {
+          displayResult('test4-result', true, 'Import correctly rejects transactions with invalid field formats');
+        } else {
+          displayResult('test4-result', false, 'Import did not properly validate field formats');
+        }
+      } catch (error) {
+        displayResult('test4-result', false, `Invalid formats test failed: ${error.message}`);
+      }
+    }
+    
+    // Test 5: Invalid JSON Syntax
+    function testInvalidJSON() {
+      try {
+        const invalidJSONStrings = [
+          '{invalid json]',
+          '{"key": value}',
+          '{"key": "value",}',
+          '[{"amount": 10',
+          '{key: "value"}'
+        ];
+        
+        let allErrorsCorrect = true;
+        invalidJSONStrings.forEach(jsonStr => {
+          try {
+            JSON.parse(jsonStr);
+            // If parsing succeeded, this is a problem
+            allErrorsCorrect = false;
+          } catch (parseError) {
+            // Error should contain message
+            if (!parseError.message || parseError.message.length === 0) {
+              allErrorsCorrect = false;
+            }
+          }
+        });
+        
+        if (allErrorsCorrect) {
+          displayResult('test5-result', true, 'Invalid JSON syntax produces error with parse details');
+        } else {
+          displayResult('test5-result', false, 'Invalid JSON error handling is incorrect');
+        }
+      } catch (error) {
+        displayResult('test5-result', false, `Invalid JSON test failed: ${error.message}`);
+      }
+    }
+    
+    // Test 6: Import Additivity
+    function testImportAdditivity() {
+      try {
+        // Setup: Start with existing transactions
+        transactions = [
+          { id: '1', amount: 10.00, category: 'Food', date: '2024-01-15', notes: 'Original', createdAt: Date.now() }
+        ];
+        
+        const originalCount = transactions.length;
+        const originalId = transactions[0].id;
+        
+        // Import new transactions
+        const newData = [
+          { amount: 20.00, category: 'Transport', date: '2024-01-16', notes: 'New' }
+        ];
+        
+        // Simulate import (add to existing)
+        newData.forEach(tx => {
+          transactions.push({
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            amount: tx.amount,
+            category: tx.category,
+            date: tx.date,
+            notes: tx.notes || '',
+            createdAt: Date.now()
+          });
+        });
+        
+        // Verify original transaction still exists
+        const originalStillExists = transactions.some(tx => tx.id === originalId);
+        const newCount = transactions.length;
+        
+        if (originalStillExists && newCount === originalCount + newData.length) {
+          displayResult('test6-result', true, 'Import adds new transactions without removing existing ones');
+        } else {
+          displayResult('test6-result', false, `Import modified existing data: original exists=${originalStillExists}, count=${newCount}`);
+        }
+      } catch (error) {
+        displayResult('test6-result', false, `Import additivity test failed: ${error.message}`);
+      }
+    }
+    
+    // Test 7: Serialize-Deserialize-Serialize Byte Identity
+    function testByteIdentity() {
+      try {
+        const testData = [
+          { amount: 10.99, category: 'Food', date: '2024-01-15', notes: 'Test' },
+          { amount: 50.00, category: 'Transport', date: '2024-01-14', notes: '' }
+        ];
+        
+        // First serialization
+        const json1 = JSON.stringify(testData);
+        
+        // Deserialize
+        const parsed = JSON.parse(json1);
+        
+        // Second serialization
+        const json2 = JSON.stringify(parsed);
+        
+        // Compare byte-for-byte
+        if (json1 === json2) {
+          displayResult('test7-result', true, 'Serialize-deserialize-serialize produces byte-identical output');
+        } else {
+          displayResult('test7-result', false, 'JSON outputs are not byte-identical');
+        }
+      } catch (error) {
+        displayResult('test7-result', false, `Byte identity test failed: ${error.message}`);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Calculations Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+  <style>
+    .test-pass { color: #10b981; font-weight: bold; }
+    .test-fail { color: #ef4444; font-weight: bold; }
+  </style>
+</head>
+<body class="bg-gray-50 p-8">
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6">Dashboard Calculations & Charts Test</h1>
+    
+    <div id="test-results" class="space-y-2 mb-6 bg-white p-6 rounded-lg shadow"></div>
+    
+    <div class="bg-white p-6 rounded-lg shadow mb-6">
+      <h2 class="text-lg font-semibold mb-4">Category Chart (Pie Chart)</h2>
+      <div style="height: 300px;">
+        <canvas id="category-chart"></canvas>
+      </div>
+    </div>
+    
+    <div class="bg-white p-6 rounded-lg shadow">
+      <h2 class="text-lg font-semibold mb-4">Time Chart (Line Chart)</h2>
+      <div style="height: 300px;">
+        <canvas id="time-chart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Load app.js functions
+    const CATEGORIES = ['Food', 'Transport', 'Housing', 'Shopping', 'Entertainment', 'Health', 'Other'];
+    let transactions = [];
+    let categoryChartInstance = null;
+    let timeChartInstance = null;
+
+    // Copy getTotalSpending function
+    function getTotalSpending() {
+      const total = transactions.reduce((sum, tx) => {
+        const amount = parseFloat(tx.amount);
+        return sum + amount;
+      }, 0);
+      return Math.round(total * 100) / 100;
+    }
+
+    // Copy getSpendingByCategory function
+    function getSpendingByCategory() {
+      const categoryTotals = {};
+      const total = getTotalSpending();
+      
+      CATEGORIES.forEach(cat => {
+        categoryTotals[cat] = 0;
+      });
+      
+      transactions.forEach(tx => {
+        const amount = parseFloat(tx.amount);
+        if (categoryTotals.hasOwnProperty(tx.category)) {
+          categoryTotals[tx.category] += amount;
+        }
+      });
+      
+      const result = Object.entries(categoryTotals)
+        .filter(([category, amount]) => amount > 0)
+        .map(([category, amount]) => ({
+          category,
+          amount: Math.round(amount * 100) / 100,
+          percentage: total > 0 ? Math.round((amount / total) * 10000) / 100 : 0
+        }));
+      
+      return result;
+    }
+
+    // Copy getSpendingByMonth function
+    function getSpendingByMonth() {
+      const monthlyTotals = {};
+      const now = new Date();
+      
+      for (let i = 11; i >= 0; i--) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        monthlyTotals[key] = 0;
+      }
+      
+      transactions.forEach(tx => {
+        const date = new Date(tx.date);
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        
+        if (monthlyTotals.hasOwnProperty(key)) {
+          const amount = parseFloat(tx.amount);
+          monthlyTotals[key] += amount;
+        }
+      });
+      
+      const result = Object.entries(monthlyTotals).map(([month, amount]) => ({
+        month,
+        amount: Math.round(amount * 100) / 100
+      }));
+      
+      return result;
+    }
+
+    // Copy renderCategoryChart function
+    function renderCategoryChart(data) {
+      const canvas = document.getElementById('category-chart');
+      if (!canvas) return;
+      
+      const ctx = canvas.getContext('2d');
+      
+      if (categoryChartInstance) {
+        categoryChartInstance.destroy();
+        categoryChartInstance = null;
+      }
+      
+      if (data.length === 0) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '14px sans-serif';
+        ctx.fillStyle = '#6b7280';
+        ctx.textAlign = 'center';
+        ctx.fillText('No data available', canvas.width / 2, canvas.height / 2);
+        return;
+      }
+      
+      categoryChartInstance = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: data.map(d => `${d.category} ($${d.amount.toFixed(2)}, ${d.percentage.toFixed(1)}%)`),
+          datasets: [{
+            data: data.map(d => d.amount),
+            backgroundColor: [
+              '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+              '#9966FF', '#FF9F40', '#C9CBCF'
+            ],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Spending by Category',
+              font: { size: 16, weight: 'bold' },
+              padding: { top: 10, bottom: 20 }
+            },
+            legend: {
+              display: true,
+              position: 'bottom',
+              labels: {
+                padding: 15,
+                font: { size: 12 }
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const label = data[context.dataIndex].category;
+                  const amount = data[context.dataIndex].amount;
+                  const percentage = data[context.dataIndex].percentage;
+                  return `${label}: $${amount.toFixed(2)} (${percentage.toFixed(1)}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Copy renderTimeChart function
+    function renderTimeChart(data) {
+      const canvas = document.getElementById('time-chart');
+      if (!canvas) return;
+      
+      const ctx = canvas.getContext('2d');
+      
+      if (timeChartInstance) {
+        timeChartInstance.destroy();
+        timeChartInstance = null;
+      }
+      
+      if (data.length === 0 || data.every(d => d.amount === 0)) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '14px sans-serif';
+        ctx.fillStyle = '#6b7280';
+        ctx.textAlign = 'center';
+        ctx.fillText('No data available', canvas.width / 2, canvas.height / 2);
+        return;
+      }
+      
+      const formatMonthLabel = (monthStr) => {
+        const [year, month] = monthStr.split('-');
+        const date = new Date(year, parseInt(month) - 1, 1);
+        return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      };
+      
+      timeChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.map(d => formatMonthLabel(d.month)),
+          datasets: [{
+            label: 'Monthly Spending',
+            data: data.map(d => d.amount),
+            borderColor: '#36A2EB',
+            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            pointBackgroundColor: '#36A2EB',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Monthly Spending Trend (Last 12 Months)',
+              font: { size: 16, weight: 'bold' },
+              padding: { top: 10, bottom: 20 }
+            },
+            legend: {
+              display: true,
+              position: 'top',
+              labels: { font: { size: 12 } }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `Spending: $${context.parsed.y.toFixed(2)}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              display: true,
+              title: {
+                display: true,
+                text: 'Month',
+                font: { size: 12, weight: 'bold' }
+              },
+              grid: { display: false }
+            },
+            y: {
+              display: true,
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Amount ($)',
+                font: { size: 12, weight: 'bold' }
+              },
+              ticks: {
+                callback: function(value) {
+                  return '$' + value.toFixed(2);
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Test cases
+    function runTests() {
+      const results = [];
+
+      // Test 1: getTotalSpending with empty list (Req 3.7)
+      transactions = [];
+      const emptyTotal = getTotalSpending();
+      results.push({
+        name: 'Test 1: Empty list returns zero total (Req 3.7)',
+        pass: emptyTotal === 0,
+        expected: '0',
+        actual: String(emptyTotal)
+      });
+
+      // Test 2: getTotalSpending with multiple transactions (Req 3.1, 6.9)
+      transactions = [
+        { amount: 45.99, category: 'Food', date: '2025-01-15' },
+        { amount: 120.50, category: 'Housing', date: '2025-01-10' },
+        { amount: 23.75, category: 'Transport', date: '2025-01-12' }
+      ];
+      const total = getTotalSpending();
+      results.push({
+        name: 'Test 2: Total spending calculation with 2 decimal places (Req 3.1, 6.9)',
+        pass: total === 190.24,
+        expected: '190.24',
+        actual: String(total)
+      });
+
+      // Test 3: getTotalSpending includes zero amounts (Req 3.9)
+      transactions = [
+        { amount: 100, category: 'Food', date: '2025-01-15' },
+        { amount: 0, category: 'Transport', date: '2025-01-10' }
+      ];
+      const totalWithZero = getTotalSpending();
+      results.push({
+        name: 'Test 3: Total includes zero amounts (Req 3.9)',
+        pass: totalWithZero === 100,
+        expected: '100',
+        actual: String(totalWithZero)
+      });
+
+      // Test 4: getSpendingByCategory aggregates correctly (Req 3.2)
+      transactions = [
+        { amount: 45.99, category: 'Food', date: '2025-01-15' },
+        { amount: 30.50, category: 'Food', date: '2025-01-10' },
+        { amount: 120.00, category: 'Housing', date: '2025-01-12' }
+      ];
+      const categoryData = getSpendingByCategory();
+      const foodCategory = categoryData.find(c => c.category === 'Food');
+      results.push({
+        name: 'Test 4: Category aggregation sums correctly (Req 3.2)',
+        pass: foodCategory && foodCategory.amount === 76.49,
+        expected: '76.49 for Food',
+        actual: foodCategory ? String(foodCategory.amount) : 'not found'
+      });
+
+      // Test 5: getSpendingByCategory calculates percentages (Req 3.2)
+      const foodPercentage = foodCategory ? foodCategory.percentage : 0;
+      const expectedPercentage = Math.round((76.49 / 196.49) * 10000) / 100;
+      results.push({
+        name: 'Test 5: Category percentages calculated (Req 3.2)',
+        pass: Math.abs(foodPercentage - expectedPercentage) < 0.01,
+        expected: String(expectedPercentage),
+        actual: String(foodPercentage)
+      });
+
+      // Test 6: getSpendingByCategory with empty list (Req 3.7)
+      transactions = [];
+      const emptyCategoryData = getSpendingByCategory();
+      results.push({
+        name: 'Test 6: Empty list returns empty category data (Req 3.7)',
+        pass: emptyCategoryData.length === 0,
+        expected: '0 categories',
+        actual: `${emptyCategoryData.length} categories`
+      });
+
+      // Test 7: getSpendingByCategory with single category (Req 3.8)
+      transactions = [
+        { amount: 100, category: 'Food', date: '2025-01-15' },
+        { amount: 50, category: 'Food', date: '2025-01-10' }
+      ];
+      const singleCategoryData = getSpendingByCategory();
+      results.push({
+        name: 'Test 7: Single category shows 100% (Req 3.8)',
+        pass: singleCategoryData.length === 1 && singleCategoryData[0].percentage === 100,
+        expected: '1 category with 100%',
+        actual: `${singleCategoryData.length} category with ${singleCategoryData[0]?.percentage}%`
+      });
+
+      // Test 8: getSpendingByMonth returns 12 months (Req 3.3, 3.10)
+      const now = new Date();
+      transactions = [
+        { amount: 100, category: 'Food', date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-15` },
+        { amount: 50, category: 'Transport', date: `${now.getFullYear()}-${String(now.getMonth()).padStart(2, '0')}-10` }
+      ];
+      const monthlyData = getSpendingByMonth();
+      results.push({
+        name: 'Test 8: Monthly data returns 12 months (Req 3.3)',
+        pass: monthlyData.length === 12,
+        expected: '12 months',
+        actual: `${monthlyData.length} months`
+      });
+
+      // Test 9: getSpendingByMonth includes current month (Req 3.10)
+      const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const currentMonthData = monthlyData.find(m => m.month === currentMonthKey);
+      results.push({
+        name: 'Test 9: Monthly data includes current month (Req 3.10)',
+        pass: currentMonthData && currentMonthData.amount === 100,
+        expected: '100 for current month',
+        actual: currentMonthData ? String(currentMonthData.amount) : 'not found'
+      });
+
+      // Test 10: Currency formatting with 2 decimal places (Req 6.9, 6.10)
+      transactions = [
+        { amount: 45.9, category: 'Food', date: '2025-01-15' },
+        { amount: 100, category: 'Transport', date: '2025-01-10' }
+      ];
+      const totalFormatted = getTotalSpending();
+      results.push({
+        name: 'Test 10: All amounts formatted to 2 decimals (Req 6.9, 6.10)',
+        pass: totalFormatted === 145.90 && String(totalFormatted.toFixed(2)) === '145.90',
+        expected: '145.90',
+        actual: totalFormatted.toFixed(2)
+      });
+
+      // Display results
+      const container = document.getElementById('test-results');
+      let passCount = 0;
+      results.forEach(result => {
+        if (result.pass) passCount++;
+        const div = document.createElement('div');
+        div.className = `p-3 rounded ${result.pass ? 'bg-green-50' : 'bg-red-50'}`;
+        div.innerHTML = `
+          <span class="${result.pass ? 'test-pass' : 'test-fail'}">${result.pass ? '✓ PASS' : '✗ FAIL'}</span>
+          <span class="ml-2">${result.name}</span>
+          ${!result.pass ? `<br><span class="text-sm text-gray-600 ml-6">Expected: ${result.expected}, Got: ${result.actual}</span>` : ''}
+        `;
+        container.appendChild(div);
+      });
+
+      // Summary
+      const summary = document.createElement('div');
+      summary.className = `p-4 rounded mt-4 ${passCount === results.length ? 'bg-green-100' : 'bg-yellow-100'}`;
+      summary.innerHTML = `<strong>Summary: ${passCount} / ${results.length} tests passed</strong>`;
+      container.appendChild(summary);
+
+      // Test chart rendering with sample data
+      transactions = [
+        { amount: 150, category: 'Food', date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-15` },
+        { amount: 200, category: 'Housing', date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-10` },
+        { amount: 75, category: 'Transport', date: `${now.getFullYear()}-${String(now.getMonth()).padStart(2, '0')}-20` },
+        { amount: 50, category: 'Entertainment', date: `${now.getFullYear()}-${String(now.getMonth() - 1).padStart(2, '0')}-15` }
+      ];
+
+      const chartCategoryData = getSpendingByCategory();
+      const chartMonthlyData = getSpendingByMonth();
+
+      renderCategoryChart(chartCategoryData);
+      renderTimeChart(chartMonthlyData);
+    }
+
+    // Run tests when page loads
+    window.addEventListener('DOMContentLoaded', runTests);
+  </script>
+</body>
+</html>

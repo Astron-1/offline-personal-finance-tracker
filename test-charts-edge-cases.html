@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chart Edge Cases Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+  <style>
+    .test-section { margin-bottom: 3rem; }
+  </style>
+</head>
+<body class="bg-gray-50 p-8">
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6">Chart Edge Cases Test (Req 3.7, 3.8)</h1>
+    
+    <!-- Test 1: No Data -->
+    <div class="test-section bg-white p-6 rounded-lg shadow">
+      <h2 class="text-lg font-semibold mb-4">Test 1: No Data Available (Req 3.7)</h2>
+      <p class="text-sm text-gray-600 mb-4">Both charts should display "No data available" message</p>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div>
+          <h3 class="font-medium mb-2">Category Chart</h3>
+          <div style="height: 250px; border: 1px solid #e5e7eb; border-radius: 4px;">
+            <canvas id="category-chart-empty"></canvas>
+          </div>
+        </div>
+        <div>
+          <h3 class="font-medium mb-2">Time Chart</h3>
+          <div style="height: 250px; border: 1px solid #e5e7eb; border-radius: 4px;">
+            <canvas id="time-chart-empty"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test 2: Single Category -->
+    <div class="test-section bg-white p-6 rounded-lg shadow">
+      <h2 class="text-lg font-semibold mb-4">Test 2: Single Category - 100% (Req 3.8)</h2>
+      <p class="text-sm text-gray-600 mb-4">Category chart should show single segment representing 100%</p>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div>
+          <h3 class="font-medium mb-2">Category Chart - Only Food</h3>
+          <div style="height: 250px; border: 1px solid #e5e7eb; border-radius: 4px;">
+            <canvas id="category-chart-single"></canvas>
+          </div>
+          <p class="text-sm mt-2 text-gray-600">Expected: Food = $150.00 (100%)</p>
+        </div>
+        <div>
+          <h3 class="font-medium mb-2">Time Chart</h3>
+          <div style="height: 250px; border: 1px solid #e5e7eb; border-radius: 4px;">
+            <canvas id="time-chart-single"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test 3: Multiple Categories -->
+    <div class="test-section bg-white p-6 rounded-lg shadow">
+      <h2 class="text-lg font-semibold mb-4">Test 3: Multiple Categories with Percentages (Req 3.2, 3.5)</h2>
+      <p class="text-sm text-gray-600 mb-4">Category chart should show multiple segments with amounts and percentages</p>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div>
+          <h3 class="font-medium mb-2">Category Chart</h3>
+          <div style="height: 250px; border: 1px solid #e5e7eb; border-radius: 4px;">
+            <canvas id="category-chart-multi"></canvas>
+          </div>
+          <div class="text-sm mt-2 text-gray-600">
+            <p>Expected percentages:</p>
+            <ul class="list-disc list-inside">
+              <li>Food: $200.00 (40%)</li>
+              <li>Housing: $150.00 (30%)</li>
+              <li>Transport: $100.00 (20%)</li>
+              <li>Entertainment: $50.00 (10%)</li>
+            </ul>
+          </div>
+        </div>
+        <div>
+          <h3 class="font-medium mb-2">Time Chart</h3>
+          <div style="height: 250px; border: 1px solid #e5e7eb; border-radius: 4px;">
+            <canvas id="time-chart-multi"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test 4: Zero Amounts -->
+    <div class="test-section bg-white p-6 rounded-lg shadow">
+      <h2 class="text-lg font-semibold mb-4">Test 4: Zero Amounts Included (Req 3.9)</h2>
+      <p class="text-sm text-gray-600 mb-4">Total should include zero amounts in calculation</p>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div>
+          <h3 class="font-medium mb-2">Category Chart</h3>
+          <div style="height: 250px; border: 1px solid #e5e7eb; border-radius: 4px;">
+            <canvas id="category-chart-zero"></canvas>
+          </div>
+          <p class="text-sm mt-2 text-gray-600">Total: $100.00 (includes $0 transaction)</p>
+        </div>
+        <div>
+          <h3 class="font-medium mb-2">Time Chart</h3>
+          <div style="height: 250px; border: 1px solid #e5e7eb; border-radius: 4px;">
+            <canvas id="time-chart-zero"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test 5: Current Month Data -->
+    <div class="test-section bg-white p-6 rounded-lg shadow">
+      <h2 class="text-lg font-semibold mb-4">Test 5: Current Month Included (Req 3.10)</h2>
+      <p class="text-sm text-gray-600 mb-4">Time chart should include current (partial) month data</p>
+      <div style="height: 300px; border: 1px solid #e5e7eb; border-radius: 4px;">
+        <canvas id="time-chart-current"></canvas>
+      </div>
+      <p class="text-sm mt-2 text-gray-600" id="current-month-info"></p>
+    </div>
+
+    <!-- Test Results Summary -->
+    <div id="test-summary" class="bg-blue-50 p-6 rounded-lg shadow">
+      <h2 class="text-lg font-semibold mb-4">Test Results</h2>
+      <div id="test-results" class="space-y-2"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    // Override global chart instances for this test
+    let categoryChartEmpty = null;
+    let timeChartEmpty = null;
+    let categoryChartSingle = null;
+    let timeChartSingle = null;
+    let categoryChartMulti = null;
+    let timeChartMulti = null;
+    let categoryChartZero = null;
+    let timeChartZero = null;
+    let timeChartCurrent = null;
+
+    function runEdgeCaseTests() {
+      const testResults = [];
+      const now = new Date();
+
+      // Test 1: No data (Req 3.7)
+      transactions = [];
+      const emptyCategory = getSpendingByCategory();
+      const emptyMonthly = getSpendingByMonth();
+      
+      testResults.push({
+        name: 'Empty data returns empty category array',
+        pass: emptyCategory.length === 0
+      });
+      
+      testResults.push({
+        name: 'Empty data returns 12 months with zero amounts',
+        pass: emptyMonthly.length === 12 && emptyMonthly.every(m => m.amount === 0)
+      });
+
+      // Render empty charts
+      renderChartWrapper('category-chart-empty', 'categoryChartEmpty', emptyCategory, 'category');
+      renderChartWrapper('time-chart-empty', 'timeChartEmpty', emptyMonthly, 'time');
+
+      // Test 2: Single category (Req 3.8)
+      transactions = [
+        { amount: 150, category: 'Food', date: '2025-01-15' }
+      ];
+      const singleCategory = getSpendingByCategory();
+      
+      testResults.push({
+        name: 'Single category shows 100% percentage',
+        pass: singleCategory.length === 1 && singleCategory[0].percentage === 100
+      });
+
+      testResults.push({
+        name: 'Single category amount formatted to 2 decimals',
+        pass: singleCategory[0].amount === 150.00
+      });
+
+      // Render single category charts
+      const singleMonthly = getSpendingByMonth();
+      renderChartWrapper('category-chart-single', 'categoryChartSingle', singleCategory, 'category');
+      renderChartWrapper('time-chart-single', 'timeChartSingle', singleMonthly, 'time');
+
+      // Test 3: Multiple categories (Req 3.2, 3.5)
+      transactions = [
+        { amount: 200, category: 'Food', date: '2025-01-15' },
+        { amount: 150, category: 'Housing', date: '2025-01-10' },
+        { amount: 100, category: 'Transport', date: '2025-01-12' },
+        { amount: 50, category: 'Entertainment', date: '2025-01-14' }
+      ];
+      const multiCategory = getSpendingByCategory();
+      const total = getTotalSpending();
+      
+      testResults.push({
+        name: 'Multiple categories calculated correctly',
+        pass: multiCategory.length === 4 && total === 500
+      });
+
+      const foodCat = multiCategory.find(c => c.category === 'Food');
+      testResults.push({
+        name: 'Food category shows correct percentage (40%)',
+        pass: foodCat && foodCat.percentage === 40
+      });
+
+      // Render multi category charts
+      const multiMonthly = getSpendingByMonth();
+      renderChartWrapper('category-chart-multi', 'categoryChartMulti', multiCategory, 'category');
+      renderChartWrapper('time-chart-multi', 'timeChartMulti', multiMonthly, 'time');
+
+      // Test 4: Zero amounts (Req 3.9)
+      transactions = [
+        { amount: 100, category: 'Food', date: '2025-01-15' },
+        { amount: 0, category: 'Transport', date: '2025-01-10' }
+      ];
+      const zeroTotal = getTotalSpending();
+      const zeroCategory = getSpendingByCategory();
+      
+      testResults.push({
+        name: 'Total includes zero amounts in calculation',
+        pass: zeroTotal === 100
+      });
+
+      testResults.push({
+        name: 'Zero amount categories filtered from chart',
+        pass: zeroCategory.length === 1 && zeroCategory[0].category === 'Food'
+      });
+
+      // Render zero amount charts
+      const zeroMonthly = getSpendingByMonth();
+      renderChartWrapper('category-chart-zero', 'categoryChartZero', zeroCategory, 'category');
+      renderChartWrapper('time-chart-zero', 'timeChartZero', zeroMonthly, 'time');
+
+      // Test 5: Current month data (Req 3.10)
+      const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      transactions = [
+        { amount: 250, category: 'Food', date: `${currentMonthKey}-15` },
+        { amount: 100, category: 'Transport', date: `${currentMonthKey}-10` }
+      ];
+      const currentMonthly = getSpendingByMonth();
+      const currentMonth = currentMonthly.find(m => m.month === currentMonthKey);
+      
+      testResults.push({
+        name: 'Current month data included in monthly chart',
+        pass: currentMonth && currentMonth.amount === 350
+      });
+
+      document.getElementById('current-month-info').textContent = 
+        `Current month (${currentMonthKey}): $${currentMonth ? currentMonth.amount.toFixed(2) : '0.00'}`;
+
+      // Render current month chart
+      renderChartWrapper('time-chart-current', 'timeChartCurrent', currentMonthly, 'time');
+
+      // Display test results
+      const resultsContainer = document.getElementById('test-results');
+      const passCount = testResults.filter(t => t.pass).length;
+      
+      testResults.forEach(result => {
+        const div = document.createElement('div');
+        div.className = `flex items-center ${result.pass ? 'text-green-700' : 'text-red-700'}`;
+        div.innerHTML = `
+          <span class="font-bold mr-2">${result.pass ? '✓' : '✗'}</span>
+          <span>${result.name}</span>
+        `;
+        resultsContainer.appendChild(div);
+      });
+
+      const summary = document.createElement('div');
+      summary.className = `mt-4 p-3 rounded ${passCount === testResults.length ? 'bg-green-100' : 'bg-yellow-100'}`;
+      summary.innerHTML = `<strong>Summary: ${passCount} / ${testResults.length} tests passed</strong>`;
+      resultsContainer.appendChild(summary);
+    }
+
+    function renderChartWrapper(canvasId, instanceName, data, type) {
+      // Store instance in window object
+      if (window[instanceName]) {
+        window[instanceName].destroy();
+      }
+
+      if (type === 'category') {
+        const canvas = document.getElementById(canvasId);
+        const ctx = canvas.getContext('2d');
+        
+        if (data.length === 0) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.font = '14px sans-serif';
+          ctx.fillStyle = '#6b7280';
+          ctx.textAlign = 'center';
+          ctx.fillText('No data available', canvas.width / 2, canvas.height / 2);
+          return;
+        }
+        
+        window[instanceName] = new Chart(ctx, {
+          type: 'pie',
+          data: {
+            labels: data.map(d => `${d.category} ($${d.amount.toFixed(2)}, ${d.percentage.toFixed(1)}%)`),
+            datasets: [{
+              data: data.map(d => d.amount),
+              backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'],
+              borderWidth: 2,
+              borderColor: '#ffffff'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              title: {
+                display: true,
+                text: 'Spending by Category',
+                font: { size: 14, weight: 'bold' }
+              },
+              legend: {
+                display: true,
+                position: 'bottom',
+                labels: { padding: 10, font: { size: 10 } }
+              }
+            }
+          }
+        });
+      } else if (type === 'time') {
+        const canvas = document.getElementById(canvasId);
+        const ctx = canvas.getContext('2d');
+        
+        if (data.length === 0 || data.every(d => d.amount === 0)) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.font = '14px sans-serif';
+          ctx.fillStyle = '#6b7280';
+          ctx.textAlign = 'center';
+          ctx.fillText('No data available', canvas.width / 2, canvas.height / 2);
+          return;
+        }
+        
+        const formatMonthLabel = (monthStr) => {
+          const [year, month] = monthStr.split('-');
+          const date = new Date(year, parseInt(month) - 1, 1);
+          return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        };
+        
+        window[instanceName] = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: data.map(d => formatMonthLabel(d.month)),
+            datasets: [{
+              label: 'Monthly Spending',
+              data: data.map(d => d.amount),
+              borderColor: '#36A2EB',
+              backgroundColor: 'rgba(54, 162, 235, 0.1)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              title: {
+                display: true,
+                text: 'Monthly Spending Trend',
+                font: { size: 14, weight: 'bold' }
+              },
+              legend: { display: true, position: 'top' }
+            },
+            scales: {
+              x: {
+                title: { display: true, text: 'Month' },
+                grid: { display: false }
+              },
+              y: {
+                beginAtZero: true,
+                title: { display: true, text: 'Amount ($)' },
+                ticks: {
+                  callback: function(value) {
+                    return '$' + value.toFixed(2);
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // Run tests when page loads
+    window.addEventListener('DOMContentLoaded', runEdgeCaseTests);
+  </script>
+</body>
+</html>

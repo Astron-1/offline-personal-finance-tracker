@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRUD Operations Test Suite</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #555;
+      margin-top: 30px;
+    }
+    .test-section {
+      background: white;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .test-case {
+      margin: 10px 0;
+      padding: 10px;
+      border-left: 4px solid #ddd;
+    }
+    .test-case.pass {
+      background: #d4edda;
+      border-left-color: #28a745;
+    }
+    .test-case.fail {
+      background: #f8d7da;
+      border-left-color: #dc3545;
+    }
+    .test-name {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .test-details {
+      font-size: 14px;
+      color: #666;
+      margin-top: 5px;
+    }
+    .summary {
+      background: #e7f3ff;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-weight: bold;
+    }
+    .summary.all-pass {
+      background: #d4edda;
+      color: #155724;
+    }
+    .summary.has-fail {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .error-message {
+      color: #dc3545;
+      font-family: monospace;
+      font-size: 12px;
+      margin-top: 5px;
+      padding: 5px;
+      background: #fff;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Transaction CRUD & localStorage Operations Test Suite</h1>
+  <p>Testing Requirements: 1.1, 1.2, 1.3, 1.4, 1.7, 1.8, 1.9, 4.1, 4.2, 4.4, 4.5, 4.6, 4.7</p>
+  
+  <div>
+    <button onclick="runAllTests()">Run All Tests</button>
+    <button onclick="clearResults()">Clear Results</button>
+    <button onclick="clearStorage()">Clear Storage</button>
+  </div>
+
+  <div id="results"></div>
+
+  <!-- Mock message container for tests -->
+  <div id="message-container" style="display: none;"></div>
+
+  <!-- Load app.js -->
+  <script src="app.js"></script>
+
+  <script>
+    let testResults = [];
+    let totalTests = 0;
+    let passedTests = 0;
+
+    function assert(condition, testName, details = '') {
+      totalTests++;
+      const result = {
+        name: testName,
+        passed: condition,
+        details: details
+      };
+      testResults.push(result);
+      if (condition) passedTests++;
+      return condition;
+    }
+
+    function assertEquals(actual, expected, testName) {
+      const passed = actual === expected;
+      const details = passed ? '' : `Expected: ${expected}, Got: ${actual}`;
+      return assert(passed, testName, details);
+    }
+
+    function assertArrayEquals(actual, expected, testName) {
+      const passed = JSON.stringify(actual) === JSON.stringify(expected);
+      const details = passed ? '' : `Expected: ${JSON.stringify(expected)}, Got: ${JSON.stringify(actual)}`;
+      return assert(passed, testName, details);
+    }
+
+    function clearResults() {
+      document.getElementById('results').innerHTML = '';
+      testResults = [];
+      totalTests = 0;
+      passedTests = 0;
+    }
+
+    function clearStorage() {
+      localStorage.clear();
+      transactions = [];
+      console.log('Storage cleared');
+      alert('Storage cleared successfully');
+    }
+
+    function displayResults() {
+      const resultsDiv = document.getElementById('results');
+      
+      // Group results by category
+      const categories = {
+        'Storage Functions': [],
+        'Validation Functions': [],
+        'CRUD Operations': [],
+        'Error Handling': []
+      };
+
+      testResults.forEach(result => {
+        if (result.name.includes('Storage') || result.name.includes('localStorage')) {
+          categories['Storage Functions'].push(result);
+        } else if (result.name.includes('Validation') || result.name.includes('validate')) {
+          categories['Validation Functions'].push(result);
+        } else if (result.name.includes('CRUD') || result.name.includes('Add') || 
+                   result.name.includes('Update') || result.name.includes('Delete') || 
+                   result.name.includes('Retrieve')) {
+          categories['CRUD Operations'].push(result);
+        } else {
+          categories['Error Handling'].push(result);
+        }
+      });
+
+      let html = `<div class="summary ${passedTests === totalTests ? 'all-pass' : 'has-fail'}">
+        Tests Passed: ${passedTests} / ${totalTests} 
+        ${passedTests === totalTests ? '✓ All tests passed!' : '✗ Some tests failed'}
+      </div>`;
+
+      for (const [category, results] of Object.entries(categories)) {
+        if (results.length === 0) continue;
+        
+        html += `<div class="test-section">
+          <h2>${category}</h2>`;
+        
+        results.forEach(result => {
+          html += `<div class="test-case ${result.passed ? 'pass' : 'fail'}">
+            <div class="test-name">${result.passed ? '✓' : '✗'} ${result.name}</div>
+            ${result.details ? `<div class="test-details">${result.details}</div>` : ''}
+          </div>`;
+        });
+        
+        html += `</div>`;
+      }
+
+      resultsDiv.innerHTML = html;
+    }
+
+    function runAllTests() {
+      clearResults();
+      console.log('Starting test suite...');
+
+      // Save original state
+      const originalTransactions = [...transactions];
+
+      try {
+        testStorageFunctions();
+        testValidationFunctions();
+        testCRUDOperations();
+        testErrorHandling();
+      } catch (error) {
+        console.error('Test suite error:', error);
+      } finally {
+        // Restore original state
+        transactions = originalTransactions;
+        saveTransactions(transactions);
+      }
+
+      displayResults();
+      console.log(`Test suite complete: ${passedTests}/${totalTests} passed`);
+    }
+
+    function testStorageFunctions() {
+      console.log('Testing Storage Functions...');
+
+      // Test: isStorageAvailable
+      assert(
+        isStorageAvailable() === true,
+        'Storage availability check returns true',
+        'Validates Requirement 4.5'
+      );
+
+      // Test: saveTransactions and loadTransactions round-trip
+      const testData = [
+        {
+          id: 'test1',
+          amount: 45.99,
+          category: 'Food',
+          date: '2024-01-15',
+          notes: 'Test transaction',
+          createdAt: Date.now()
+        }
+      ];
+
+      const saveResult = saveTransactions(testData);
+      assert(
+        saveResult.success === true,
+        'saveTransactions returns success',
+        'Validates Requirement 4.1, 4.4'
+      );
+
+      const loaded = loadTransactions();
+      assertArrayEquals(
+        loaded,
+        testData,
+        'loadTransactions retrieves saved data correctly',
+        'Validates Requirement 4.4'
+      );
+
+      // Test: loadTransactions with no data
+      localStorage.removeItem(STORAGE_KEY);
+      const emptyLoad = loadTransactions();
+      assertArrayEquals(
+        emptyLoad,
+        [],
+        'loadTransactions returns empty array when no data exists'
+      );
+
+      // Test: loadTransactions with corrupted data (invalid JSON)
+      localStorage.setItem(STORAGE_KEY, '{invalid json]');
+      const corruptedLoad = loadTransactions();
+      assertArrayEquals(
+        corruptedLoad,
+        [],
+        'loadTransactions returns empty array for corrupted data',
+        'Validates Requirement 4.7'
+      );
+
+      // Test: loadTransactions with non-array data
+      localStorage.setItem(STORAGE_KEY, '{"not": "an array"}');
+      const nonArrayLoad = loadTransactions();
+      assertArrayEquals(
+        nonArrayLoad,
+        [],
+        'loadTransactions returns empty array for non-array data',
+        'Validates Requirement 4.7'
+      );
+
+      // Clean up
+      localStorage.removeItem(STORAGE_KEY);
+    }
+
+    function testValidationFunctions() {
+      console.log('Testing Validation Functions...');
+
+      // Test: Valid transaction
+      const validTx = {
+        amount: 45.99,
+        category: 'Food',
+        date: '2024-01-15',
+        notes: 'Groceries'
+      };
+      const validErrors = validateTransaction(validTx);
+      assertEquals(
+        validErrors.length,
+        0,
+        'Validation passes for valid transaction'
+      );
+
+      // Test: Amount validation - positive number
+      const negativeTx = { ...validTx, amount: -10 };
+      const negativeErrors = validateTransaction(negativeTx);
+      assert(
+        negativeErrors.some(e => e.field === 'amount' && e.message.includes('positive')),
+        'Validation rejects negative amount',
+        'Validates Requirement 1.7'
+      );
+
+      // Test: Amount validation - max 2 decimal places
+      const decimalTx = { ...validTx, amount: 10.999 };
+      const decimalErrors = validateTransaction(decimalTx);
+      assert(
+        decimalErrors.some(e => e.field === 'amount' && e.message.includes('decimal')),
+        'Validation rejects amount with >2 decimal places',
+        'Validates Requirement 1.7'
+      );
+
+      // Test: Amount validation - non-numeric
+      const nonNumericTx = { ...validTx, amount: 'abc' };
+      const nonNumericErrors = validateTransaction(nonNumericTx);
+      assert(
+        nonNumericErrors.some(e => e.field === 'amount'),
+        'Validation rejects non-numeric amount',
+        'Validates Requirement 1.7'
+      );
+
+      // Test: Category validation - invalid category
+      const invalidCategoryTx = { ...validTx, category: 'InvalidCategory' };
+      const categoryErrors = validateTransaction(invalidCategoryTx);
+      assert(
+        categoryErrors.some(e => e.field === 'category' && e.code === 'INVALID_CATEGORY'),
+        'Validation rejects invalid category',
+        'Validates Requirement 1.4'
+      );
+
+      // Test: Category validation - all valid categories
+      const validCategories = ['Food', 'Transport', 'Housing', 'Shopping', 'Entertainment', 'Health', 'Other'];
+      validCategories.forEach(cat => {
+        const catTx = { ...validTx, category: cat };
+        const catErrors = validateTransaction(catTx);
+        assert(
+          !catErrors.some(e => e.field === 'category'),
+          `Validation accepts valid category: ${cat}`,
+          'Validates Requirement 1.4'
+        );
+      });
+
+      // Test: Date validation - invalid date
+      const invalidDateTx = { ...validTx, date: '2024-02-30' };
+      const dateErrors = validateTransaction(invalidDateTx);
+      assert(
+        dateErrors.some(e => e.field === 'date' && e.code === 'INVALID_DATE'),
+        'Validation rejects invalid date',
+        'Validates Requirement 1.8'
+      );
+
+      // Test: Date validation - malformed date
+      const malformedDateTx = { ...validTx, date: 'not-a-date' };
+      const malformedErrors = validateTransaction(malformedDateTx);
+      assert(
+        malformedErrors.some(e => e.field === 'date'),
+        'Validation rejects malformed date',
+        'Validates Requirement 1.8'
+      );
+
+      // Test: Notes validation - max 500 characters
+      const longNotesTx = { ...validTx, notes: 'a'.repeat(501) };
+      const notesErrors = validateTransaction(longNotesTx);
+      assert(
+        notesErrors.some(e => e.field === 'notes' && e.code === 'MAX_LENGTH_EXCEEDED'),
+        'Validation rejects notes >500 characters'
+      );
+
+      // Test: Notes validation - exactly 500 characters OK
+      const exactNotesTx = { ...validTx, notes: 'a'.repeat(500) };
+      const exactNotesErrors = validateTransaction(exactNotesTx);
+      assert(
+        !exactNotesErrors.some(e => e.field === 'notes'),
+        'Validation accepts notes with exactly 500 characters'
+      );
+    }
+
+    function testCRUDOperations() {
+      console.log('Testing CRUD Operations...');
+
+      // Clear transactions for clean test
+      transactions = [];
+      localStorage.removeItem(STORAGE_KEY);
+
+      // Test: Add transaction
+      const newTx = {
+        amount: 45.99,
+        category: 'Food',
+        date: '2024-01-15',
+        notes: 'Test transaction'
+      };
+
+      const addResult = addTransaction(newTx);
+      assert(
+        addResult.success === true,
+        'CRUD: addTransaction returns success',
+        'Validates Requirement 1.1'
+      );
+      assert(
+        addResult.transaction && addResult.transaction.id,
+        'CRUD: addTransaction generates ID',
+        'Validates Requirement 1.1'
+      );
+      assertEquals(
+        transactions.length,
+        1,
+        'CRUD: Transaction added to array',
+        'Validates Requirement 1.1'
+      );
+
+      // Verify it was saved to localStorage
+      const savedData = loadTransactions();
+      assertEquals(
+        savedData.length,
+        1,
+        'CRUD: Transaction persisted to localStorage',
+        'Validates Requirement 1.1, 4.4'
+      );
+
+      // Test: Update transaction
+      const txId = addResult.transaction.id;
+      const updateData = {
+        amount: 50.00,
+        category: 'Transport',
+        date: '2024-01-16',
+        notes: 'Updated transaction'
+      };
+
+      const updateResult = updateTransaction(txId, updateData);
+      assert(
+        updateResult.success === true,
+        'CRUD: updateTransaction returns success',
+        'Validates Requirement 1.2'
+      );
+
+      const updatedTx = transactions.find(t => t.id === txId);
+      assertEquals(
+        updatedTx.amount,
+        50.00,
+        'CRUD: Transaction amount updated',
+        'Validates Requirement 1.2'
+      );
+      assertEquals(
+        updatedTx.category,
+        'Transport',
+        'CRUD: Transaction category updated',
+        'Validates Requirement 1.2'
+      );
+
+      // Test: Update non-existent transaction
+      const updateNonExistentResult = updateTransaction('nonexistent', updateData);
+      assert(
+        updateNonExistentResult.success === false,
+        'CRUD: updateTransaction fails for non-existent ID'
+      );
+
+      // Test: Delete transaction
+      const deleteResult = deleteTransaction(txId);
+      assert(
+        deleteResult.success === true,
+        'CRUD: deleteTransaction returns success',
+        'Validates Requirement 1.3'
+      );
+      assertEquals(
+        transactions.length,
+        0,
+        'CRUD: Transaction removed from array',
+        'Validates Requirement 1.3'
+      );
+
+      // Verify deletion persisted
+      const afterDelete = loadTransactions();
+      assertEquals(
+        afterDelete.length,
+        0,
+        'CRUD: Deletion persisted to localStorage',
+        'Validates Requirement 1.3'
+      );
+
+      // Test: Delete non-existent transaction
+      const deleteNonExistentResult = deleteTransaction('nonexistent');
+      assert(
+        deleteNonExistentResult.success === false,
+        'CRUD: deleteTransaction fails for non-existent ID'
+      );
+
+      // Test: getAllTransactions sorting
+      transactions = [
+        { id: '1', amount: 10, category: 'Food', date: '2024-01-15', notes: '', createdAt: Date.now() },
+        { id: '2', amount: 20, category: 'Food', date: '2024-01-20', notes: '', createdAt: Date.now() },
+        { id: '3', amount: 30, category: 'Food', date: '2024-01-10', notes: '', createdAt: Date.now() }
+      ];
+
+      const sorted = getAllTransactions();
+      assertEquals(
+        sorted[0].id,
+        '2',
+        'CRUD: getAllTransactions sorts by date descending (most recent first)',
+        'Validates Requirement 2.1'
+      );
+      assertEquals(
+        sorted[1].id,
+        '1',
+        'CRUD: getAllTransactions sorts correctly (middle date)'
+      );
+      assertEquals(
+        sorted[2].id,
+        '3',
+        'CRUD: getAllTransactions sorts correctly (oldest last)',
+        'Validates Requirement 2.1'
+      );
+    }
+
+    function testErrorHandling() {
+      console.log('Testing Error Handling...');
+
+      // Test: Add transaction with validation errors
+      const invalidTx = {
+        amount: -10,
+        category: 'InvalidCategory',
+        date: 'invalid-date',
+        notes: ''
+      };
+
+      const originalLength = transactions.length;
+      const invalidResult = addTransaction(invalidTx);
+      
+      assert(
+        invalidResult.success === false,
+        'Error: addTransaction fails with validation errors',
+        'Validates Requirement 1.6'
+      );
+      assert(
+        invalidResult.errors && invalidResult.errors.length > 0,
+        'Error: addTransaction returns error array',
+        'Validates Requirement 1.6'
+      );
+      assertEquals(
+        transactions.length,
+        originalLength,
+        'Error: Invalid transaction not added to array',
+        'Validates Requirement 1.7, 1.8'
+      );
+
+      // Test: Update with validation errors
+      if (transactions.length > 0) {
+        const firstId = transactions[0].id;
+        const invalidUpdate = updateTransaction(firstId, invalidTx);
+        
+        assert(
+          invalidUpdate.success === false,
+          'Error: updateTransaction fails with validation errors',
+          'Validates Requirement 1.6'
+        );
+      }
+
+      // Test: localStorage quota exceeded (simulated by description)
+      // Note: Actually filling localStorage to trigger QuotaExceededError would
+      // require generating massive amounts of data, so we verify the error
+      // handling code exists in saveTransactions
+      assert(
+        saveTransactions.toString().includes('QuotaExceededError'),
+        'Error: saveTransactions handles QuotaExceededError',
+        'Validates Requirement 4.6, 1.9'
+      );
+
+      // Test: Transaction not found errors already tested in CRUD section
+
+      // Verify error codes are used
+      const testTx = { amount: -10, category: 'Food', date: '2024-01-15', notes: '' };
+      const errors = validateTransaction(testTx);
+      assert(
+        errors.some(e => e.code),
+        'Error: Validation errors include error codes'
+      );
+    }
+  </script>
+</body>
+</html>

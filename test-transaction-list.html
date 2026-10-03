@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transaction List UI Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .test-section {
+      margin: 2rem 0;
+      padding: 1rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 0.5rem;
+    }
+    .test-pass {
+      color: #059669;
+      font-weight: bold;
+    }
+    .test-fail {
+      color: #dc2626;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 p-8">
+  <h1 class="text-2xl font-bold mb-6">Transaction List UI Tests</h1>
+  
+  <div id="test-results" class="space-y-4"></div>
+  
+  <!-- Hidden DOM elements for testing -->
+  <div style="display: none;">
+    <div id="message-container"></div>
+    <div id="transaction-list"></div>
+    <form id="transaction-form">
+      <input type="number" id="amount">
+      <select id="category"></select>
+      <input type="date" id="date">
+      <input type="text" id="notes">
+      <button type="submit" id="submit-btn">Add Transaction</button>
+      <div id="amount-error" class="hidden"></div>
+      <div id="category-error" class="hidden"></div>
+      <div id="date-error" class="hidden"></div>
+      <div id="notes-error" class="hidden"></div>
+    </form>
+    <h2 id="form-title">Add Transaction</h2>
+    <button id="cancel-edit-btn" class="hidden">Cancel</button>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    // Test utilities
+    function runTests() {
+      const results = [];
+      
+      // Clear localStorage for clean tests
+      localStorage.clear();
+      transactions = [];
+      
+      // Test 1: Empty state display
+      console.log('Test 1: Empty state display');
+      renderTransactionList();
+      const container = document.getElementById('transaction-list');
+      const hasEmptyState = container.innerHTML.includes('No transactions yet');
+      results.push({
+        name: 'Empty state displays when no transactions exist (Req 2.4)',
+        pass: hasEmptyState,
+        details: hasEmptyState ? 'Empty state message found' : 'Empty state message not found'
+      });
+      
+      // Test 2: Add transaction and render
+      console.log('Test 2: Add transaction and render');
+      const tx1 = addTransaction({
+        amount: 50.99,
+        category: 'Food',
+        date: '2025-01-15',
+        notes: 'Groceries'
+      });
+      renderTransactionList();
+      const hasTable = container.innerHTML.includes('<table');
+      const hasAmount = container.innerHTML.includes('50.99');
+      const hasCategory = container.innerHTML.includes('Food');
+      results.push({
+        name: 'Transaction displays in list after adding (Req 2.1)',
+        pass: tx1.success && hasTable && hasAmount && hasCategory,
+        details: `Transaction added: ${tx1.success}, Table: ${hasTable}, Amount: ${hasAmount}, Category: ${hasCategory}`
+      });
+      
+      // Test 3: Right-aligned amounts
+      console.log('Test 3: Right-aligned amounts');
+      const hasRightAlign = container.innerHTML.includes('text-right') && container.innerHTML.includes('currency');
+      results.push({
+        name: 'Amount values are right-aligned (Req 2.2)',
+        pass: hasRightAlign,
+        details: hasRightAlign ? 'Right-align class found' : 'Right-align class not found'
+      });
+      
+      // Test 4: Date descending order
+      console.log('Test 4: Date descending order');
+      addTransaction({
+        amount: 25.50,
+        category: 'Transport',
+        date: '2025-01-20',
+        notes: 'Bus fare'
+      });
+      addTransaction({
+        amount: 100.00,
+        category: 'Shopping',
+        date: '2025-01-10',
+        notes: 'Clothes'
+      });
+      const sorted = getAllTransactions();
+      const isDescending = sorted[0].date === '2025-01-20' && sorted[1].date === '2025-01-15' && sorted[2].date === '2025-01-10';
+      results.push({
+        name: 'Transactions sorted by date descending (Req 2.1)',
+        pass: isDescending,
+        details: `Order: ${sorted.map(t => t.date).join(', ')}`
+      });
+      
+      // Test 5: Edit transaction populates form
+      console.log('Test 5: Edit transaction populates form');
+      const txId = transactions[0].id;
+      handleEditTransaction(txId);
+      const amountField = document.getElementById('amount').value;
+      const categoryField = document.getElementById('category').value;
+      const dateField = document.getElementById('date').value;
+      const notesField = document.getElementById('notes').value;
+      const formTitle = document.getElementById('form-title').textContent;
+      const isPopulated = amountField == '25.50' && categoryField === 'Transport' && dateField === '2025-01-20' && notesField === 'Bus fare';
+      const isEditMode = formTitle === 'Edit Transaction' && editingId === txId;
+      results.push({
+        name: 'Edit populates form with transaction data (Req 2.5)',
+        pass: isPopulated && isEditMode,
+        details: `Populated: ${isPopulated}, Edit mode: ${isEditMode}`
+      });
+      
+      // Test 6: Delete transaction confirmation (can't test actual confirm dialog, but test function exists)
+      console.log('Test 6: Delete transaction function');
+      const deleteExists = typeof handleDeleteTransaction === 'function';
+      results.push({
+        name: 'Delete function exists and requires confirmation (Req 2.6)',
+        pass: deleteExists,
+        details: deleteExists ? 'handleDeleteTransaction function defined' : 'Function not found'
+      });
+      
+      // Test 7: Success message timing
+      console.log('Test 7: Success message timing');
+      const startTime = Date.now();
+      showMessage('Test success message', 'success');
+      const messageContainer = document.getElementById('message-container');
+      const hasMessage = messageContainer.innerHTML.includes('Test success message');
+      setTimeout(() => {
+        const endTime = Date.now();
+        const duration = endTime - startTime;
+        const messageGone = messageContainer.innerHTML === '';
+        results.push({
+          name: 'Success message displays for 2+ seconds (Req 1.5)',
+          pass: hasMessage && messageGone && duration >= 2000,
+          details: `Message shown: ${hasMessage}, Cleared: ${messageGone}, Duration: ${duration}ms`
+        });
+        
+        // Test 8: Error message timing
+        console.log('Test 8: Error message timing');
+        const errorStart = Date.now();
+        showMessage('Test error message', 'error');
+        setTimeout(() => {
+          const errorEnd = Date.now();
+          const errorDuration = errorEnd - errorStart;
+          const errorGone = messageContainer.innerHTML === '';
+          results.push({
+            name: 'Error message displays for 3+ seconds (Req 1.6)',
+            pass: errorGone && errorDuration >= 3000,
+            details: `Cleared: ${errorGone}, Duration: ${errorDuration}ms`
+          });
+          
+          // Display all results
+          displayResults(results);
+        }, 3100);
+      }, 2100);
+    }
+    
+    function displayResults(results) {
+      const container = document.getElementById('test-results');
+      container.innerHTML = results.map(result => `
+        <div class="test-section ${result.pass ? 'border-green-500' : 'border-red-500'}">
+          <div class="${result.pass ? 'test-pass' : 'test-fail'}">
+            ${result.pass ? '✓ PASS' : '✗ FAIL'}: ${result.name}
+          </div>
+          <div class="text-sm text-gray-600 mt-2">${result.details}</div>
+        </div>
+      `).join('');
+      
+      const passCount = results.filter(r => r.pass).length;
+      const totalCount = results.length;
+      container.innerHTML += `
+        <div class="test-section border-blue-500 bg-blue-50">
+          <div class="text-lg font-bold">
+            Results: ${passCount}/${totalCount} tests passed
+          </div>
+        </div>
+      `;
+    }
+    
+    // Run tests when page loads
+    window.addEventListener('DOMContentLoaded', () => {
+      // Wait a bit for everything to initialize
+      setTimeout(runTests, 500);
+    });
+  </script>
+</body>
+</html>

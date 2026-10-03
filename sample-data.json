@@ -1,0 +1,32 @@
+[
+  {
+    "amount": 45.99,
+    "category": "Food",
+    "date": "2024-01-15",
+    "notes": "Groceries at supermarket"
+  },
+  {
+    "amount": 120.00,
+    "category": "Housing",
+    "date": "2024-01-01",
+    "notes": "Monthly rent payment"
+  },
+  {
+    "amount": 25.50,
+    "category": "Transport",
+    "date": "2024-01-10",
+    "notes": "Gas for car"
+  },
+  {
+    "amount": 15.00,
+    "category": "Entertainment",
+    "date": "2024-01-12",
+    "notes": "Movie tickets"
+  },
+  {
+    "amount": 75.25,
+    "category": "Shopping",
+    "date": "2024-01-08",
+    "notes": "New shoes"
+  }
+]

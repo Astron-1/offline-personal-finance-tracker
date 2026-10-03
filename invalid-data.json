@@ -1,0 +1,19 @@
+[
+  {
+    "category": "Food",
+    "date": "2024-01-15",
+    "notes": "Missing amount field"
+  },
+  {
+    "amount": "not-a-number",
+    "category": "Transport",
+    "date": "2024-01-10",
+    "notes": "Invalid amount format"
+  },
+  {
+    "amount": 25.50,
+    "category": "InvalidCategory",
+    "date": "2024-01-08",
+    "notes": "Unrecognized category"
+  }
+]
